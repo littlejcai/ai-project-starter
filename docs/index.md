@@ -6,6 +6,7 @@
 |---|---|---|
 | 首次接手 | [README](../README.md)、[当前状态](status.md)、[产品](product.md) | 工程配置、现有启动命令 |
 | 方法选择与风险分级 | [开发原则](principles.md) | 当前目标、约束与证据 |
+| 子 Agent 委派与整合 | [协作约定](agents.md)、[委派提示](../prompts/subagent-review.md) | 任务目标、版本、文件边界、环境与证据 |
 | 审查方案或实现 | [审查流程](review.md)、[审查提示](../prompts/review-task.md) | 需求、约定、真实差异、测试 |
 | 澄清需求 | [产品](product.md)、[任务模板](tasks/TEMPLATE.md) | 已有行为与相关测试 |
 | 架构或跨模块变更 | [架构](architecture.md)、[决策目录](decisions/README.md) | 模块边界、依赖、数据流 |
