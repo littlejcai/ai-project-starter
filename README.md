@@ -1,0 +1,59 @@
+# AI 项目开发基础框架 · v1.0.0
+
+适用：个人或小团队由 AI 辅助开发的网页、小程序、后端项目。
+这是一套可复制的工程工作模板，包含文档、任务、验证脚本和独立示例；尚未选定你的业务技术栈，也不包含已经完成的业务应用。
+
+## 方法总结
+
+1. PRD 同时明确用户、范围、关键业务规则与可判断的验收场景。
+2. 对关键交互、平台能力和第三方依赖先做小验证，再细化技术方案。
+3. 为当前完整业务链路明确数据模型、接口、权限、状态和异常。
+4. 先列测试用例，再逐个经历测试失败、实现、通过、重构；不提前写完整个项目的测试代码。
+5. 每条链路及时用浏览器或开发者工具验证；需要时补真机与真实集成。
+6. 项目知识分层读取，代码、约定、测试、任务记录一起更新。
+7. 用真实执行记录判断完成，未配置、未执行、模拟通过不得写成业务通过。
+
+## 5 分钟开始
+
+需要 Python 3.10 或更高版本，只使用标准库。Windows 如果没有 python3，使用 `py -3` 替换命令前缀。所有命令从本目录运行。
+
+```bash
+python3 scripts/check_template.py
+python3 scripts/verify.py --profile demo
+python3 scripts/new_task.py FEAT-001 "第一条完整业务链路"
+```
+
+第一条检查模板结构和本地文档链接；第二条运行独立示例测试；第三条创建任务，不覆盖已有文件。
+
+若修改框架工具本身，可运行 `python3 scripts/test_framework.py` 检查错误传播、配置校验与任务文件保护；所有回归在临时副本执行。
+
+然后把整个解压目录作为新项目起点，交给 AI 读取 [AGENTS.md](AGENTS.md)，使用 [启动任务说明](prompts/start-project.md)。
+先填写 [产品定义](docs/product.md)、[技术方案](docs/architecture.md)、[当前状态](docs/status.md)，确定网页或小程序路径。
+在 `src/`、`tests/` 中加入真正的业务代码和测试，按 [检查接入指南](docs/verification-setup.md) 配置 `project.config.json`。
+
+```bash
+python3 scripts/verify.py --profile quick
+python3 scripts/verify.py --profile full
+```
+
+模板内 quick/full 故意处于未配置状态，将返回非零退出码；接入真实业务检查后才能通过。
+demo 通过只表示示例规则测试通过。full 通过只代表配置的自动检查通过，真机、体验与发布验收仍按任务记录执行。
+
+## 从哪里阅读
+
+- [项目知识目录](docs/index.md)：按任务选择资料。
+- [开发流程](docs/workflow.md)：从启动到交付。
+- [测试策略](docs/testing.md)：如何分层、如何防止假通过。
+- [已填写示例任务](examples/registration/FEAT-DEMO.md)：看一条规则怎样连接验收与测试。
+- [发布清单](docs/release.md)：交付、部署与回退。
+- [模板验证记录](TEMPLATE-VALIDATION.md)：本压缩包实际检查范围。
+
+## 跨 AI 使用
+
+公共说明只维护在 AGENTS.md 与 docs/。不同工具是否自动读取入口需要按实际客户端确认；没有自动读取能力时，手动要求先阅读 AGENTS.md。
+CLAUDE.md 是轻量指引，其他工具可参照 adapters/README.md 接入。不保证所有工具自动识别相同文件名。
+
+## 版本与使用
+
+创建日期：2026-09-12。可自由复制、修改这些原创模板用于个人或商业项目；外部引用内容遵循各自来源条款。
+建议初始化你自己的 Git 仓库，并随业务版本维护文档。不要把真实密钥、生产数据和含敏感信息的截图提交到仓库。

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "project_name": "REPLACE_WITH_PROJECT_NAME",
+  "runtime_commands": {
+    "install": [],
+    "dev": []
+  },
+  "gates": {
+    "quality": {
+      "status": "unconfigured",
+      "command": [],
+      "reason": "",
+      "timeout_seconds": 300
+    },
+    "unit": {
+      "status": "unconfigured",
+      "command": [],
+      "reason": "",
+      "timeout_seconds": 300
+    },
+    "integration": {
+      "status": "unconfigured",
+      "command": [],
+      "reason": "",
+      "timeout_seconds": 600
+    },
+    "build": {
+      "status": "unconfigured",
+      "command": [],
+      "reason": "",
+      "timeout_seconds": 600
+    },
+    "e2e": {
+      "status": "unconfigured",
+      "command": [],
+      "reason": "",
+      "timeout_seconds": 600
+    }
+  }
+}
