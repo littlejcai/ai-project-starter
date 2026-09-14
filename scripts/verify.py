@@ -10,36 +10,7 @@ import time
 import uuid
 
 from check_template import ROOT, check
-
-GATES = ['quality', 'unit', 'integration', 'build', 'e2e']
-
-
-def validate(config):
-    if not isinstance(config, dict) or config.get('schema_version') != 1:
-        raise ValueError('Expected schema_version 1 object')
-    if not isinstance(config.get('project_name'), str) or not config['project_name'].strip():
-        raise ValueError('project_name must be a nonempty string')
-    gates = config.get('gates')
-    if not isinstance(gates, dict) or set(gates) != set(GATES):
-        raise ValueError('gates must contain exactly: ' + ', '.join(GATES))
-    for name, gate in gates.items():
-        if not isinstance(gate, dict):
-            raise ValueError(f'{name}: gate must be an object')
-        status = gate.get('status')
-        command = gate.get('command')
-        if status not in {'configured', 'unconfigured', 'not_applicable'}:
-            raise ValueError(f'{name}: invalid status')
-        if not isinstance(command, list) or any(not isinstance(s, str) or not s for s in command):
-            raise ValueError(f'{name}: command must be an array of nonempty strings')
-        if status == 'configured' and not command:
-            raise ValueError(f'{name}: configured command is empty')
-        if status != 'configured' and command:
-            raise ValueError(f'{name}: inactive gate must not contain a command')
-        if status == 'not_applicable' and not str(gate.get('reason', '')).strip():
-            raise ValueError(f'{name}: not_applicable requires a reason')
-        timeout = gate.get('timeout_seconds', 300)
-        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0 < timeout <= 3600:
-            raise ValueError(f'{name}: timeout_seconds must be >0 and <=3600')
+from project_config import GATES, lifecycle, load_config, required_gates, validate
 
 
 def git_value(*args):
@@ -77,7 +48,7 @@ def execute(name, gate, folder):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile', choices=['demo', 'quick', 'full'], required=True)
+    parser.add_argument('--profile', choices=['demo', 'current', 'quick', 'full'], required=True)
     args = parser.parse_args()
     now = datetime.now(timezone.utc)
     folder = ROOT / 'artifacts' / (now.strftime('%Y%m%dT%H%M%S') + '-' + uuid.uuid4().hex[:8])
@@ -88,20 +59,28 @@ def main():
               'git_status_before': git_value('status', '--porcelain'), 'checks': []}
     exit_code = 0
     try:
-        config = json.loads((ROOT / 'project.config.json').read_text(encoding='utf-8'))
+        config = load_config(ROOT)
         validate(config)
+        stage = lifecycle(config)['stage']
+        report['project_stage'] = stage
         report['config_snapshot'] = config
         errors = check()
         report['checks'].append({'name': 'template_integrity',
                                  'status': 'failed' if errors else 'passed', 'errors': errors})
         if errors:
             exit_code = 1
-        if args.profile == 'demo':
+        if args.profile == 'demo' or (args.profile == 'current' and stage == 'template'):
             selected = {'demo': {'status': 'configured', 'command': [
                 '{python}', '-m', 'unittest', 'discover', '-s', 'examples/registration',
                 '-p', 'test_*.py', '-v'], 'timeout_seconds': 60}}
+            if args.profile == 'current':
+                report['scope'] = 'current template stage; isolated example only'
         else:
-            names = GATES[:2] if args.profile == 'quick' else GATES
+            if args.profile == 'current':
+                names = required_gates(config)
+                report['scope'] = f'current {stage} stage required automatic checks only'
+            else:
+                names = GATES[:2] if args.profile == 'quick' else GATES
             selected = {name: config['gates'][name] for name in names}
             if config['project_name'] == 'REPLACE_WITH_PROJECT_NAME':
                 report['checks'].append({'name': 'project_identity', 'status': 'unconfigured'})
@@ -115,7 +94,7 @@ def main():
                     exit_code = 1
             else:
                 record = {'name': name, 'status': gate['status'], 'reason': gate.get('reason', '')}
-                if gate['status'] == 'unconfigured':
+                if gate['status'] == 'unconfigured' or args.profile == 'current':
                     exit_code = 1
             report['checks'].append(record)
             print(f'{name}: {record["status"]}')

@@ -1,4 +1,4 @@
-# AI 项目开发基础框架 · v1.3.0
+# AI 项目开发基础框架 · v1.4.0
 
 适用：个人或小团队由 AI 辅助开发的网页、小程序、后端项目。
 这是一套可复制的工程工作模板，包含文档、任务、验证脚本和独立示例；尚未选定你的业务技术栈，也不包含已经完成的业务应用。
@@ -12,6 +12,11 @@
 5. 界面行为用浏览器或开发者工具验证；涉及平台能力和真实依赖时补真机与集成证据。
 6. 项目知识分层读取，代码、约定、测试、任务记录一起更新。
 7. 用真实执行记录判断完成，未配置、未执行、模拟通过不得写成业务通过。
+
+## v1.4 的项目生命周期
+
+项目通过 `template → discovery → application → release` 四个阶段从模板转为正式产品。每个阶段在 `project.config.json` 声明当前必须通过的自动门禁，`current` 只验证当前承诺，`full` 仍严格检查全部五层。
+任务 ID 与状态改为项目配置，默认同时支持 `FEAT-001`、`FEAT-ID-001` 和 `M0-001`。项目自检会核对配置、当前门禁、任务文件和文档链接；模板发行清单只在 template 阶段严格验证，不跟踪后续业务文件。
 
 ## v1.3 的指令精简
 
@@ -36,26 +41,37 @@
 需要 Python 3.10 或更高版本，只使用标准库。Windows 如果没有 python3，使用 `py -3` 替换命令前缀。所有命令从本目录运行。
 
 ```bash
-python3 scripts/check_template.py
-python3 scripts/verify.py --profile demo
-python3 scripts/new_task.py FEAT-001 "第一条完整业务链路"
+python3 scripts/doctor.py --strict-manifest
+python3 scripts/verify.py --profile current
+python3 scripts/new_task.py FEAT-ID-001 "第一条完整业务链路"
 ```
 
-第一条检查模板结构和本地文档链接；第二条运行独立示例测试；第三条创建任务，不覆盖已有文件。
+第一条检查模板发行内容、配置、任务与文档；第二条按当前阶段运行检查，template 阶段只运行独立示例；第三条按项目配置创建任务且不覆盖已有文件。
 
 若修改框架工具本身，可运行 `python3 scripts/test_framework.py` 检查错误传播、配置校验与任务文件保护；所有回归在临时副本执行。
 
 然后把整个解压目录作为新项目起点，交给 AI 读取 [AGENTS.md](AGENTS.md)，使用 [启动任务说明](prompts/start-project.md)。
 先填写 [产品定义](docs/product.md)、[技术方案](docs/architecture.md)、[当前状态](docs/status.md)，确定网页或小程序路径。
 在 `src/`、`tests/` 中加入真正的业务代码和测试，按 [检查接入指南](docs/verification-setup.md) 配置 `project.config.json`。
+只详细展开当前和下一里程碑，更远阶段先保留结果、依赖和待决问题，避免尚未验证的细节造成持续联动修改。
+
+当前阶段的必需门禁配置完成后，先 dry-run 再推进生命周期：
+
+```bash
+python3 scripts/promote_project.py --to discovery --dry-run
+python3 scripts/promote_project.py --to discovery
+```
+
+推进只修改 `project.config.json`，不会删除文件或替项目选择技术栈。随后按提示更新项目身份与状态；CI 会自动跳过模板框架回归，转而运行当前业务阶段门禁。`TEMPLATE-VALIDATION.md` 和清单更新器在离开 template 后不再是项目结构必需项，可在清理其文档引用后归档。
 
 ```bash
 python3 scripts/verify.py --profile quick
+python3 scripts/verify.py --profile current
 python3 scripts/verify.py --profile full
 ```
 
-模板内 quick/full 故意处于未配置状态，将返回非零退出码；接入真实业务检查后才能通过。
-demo 通过只表示示例规则测试通过。full 通过只代表配置的自动检查通过，真机、体验与发布验收仍按任务记录执行。
+quick 固定运行 quality/unit，current 运行当前阶段声明的必需门禁，full 检查全部五层。未配置的必需门禁会失败。
+template 阶段的 current/demo 通过只表示示例规则测试通过；任何自动检查都不能替代真机、体验与发布验收。
 
 ## 从哪里阅读
 
@@ -78,5 +94,5 @@ CLAUDE.md 是轻量指引，其他工具可参照 adapters/README.md 接入。�
 
 ## 版本与使用
 
-创建日期：2026-09-12；当前模板版本：v1.3.0。可自由复制、修改这些原创模板用于个人或商业项目；外部引用内容遵循各自来源条款。
+创建日期：2026-09-12；当前模板版本：v1.4.0。可自由复制、修改这些原创模板用于个人或商业项目；外部引用内容遵循各自来源条款。
 建议初始化你自己的 Git 仓库，并随业务版本维护文档。不要把真实密钥、生产数据和含敏感信息的截图提交到仓库。

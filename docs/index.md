@@ -15,6 +15,7 @@
 | 简单局部修改 | 相关文件及现有验收，不必新建任务 | 变更位置、调用方或预览 |
 | 评估新增 Skill 或优化指令 | [指令维护](instruction-maintenance.md) | 实际失败案例、工具与对照证据 |
 | 接入检查 | [配置说明](verification-setup.md) | [验证配置](../project.config.json) |
+| 项目从模板转为探索/正式工程 | [配置说明](verification-setup.md)、[流程](workflow.md) | 生命周期阶段、当前必需门禁、项目身份与 CI |
 | 网页验收 | [网页路径](profiles/web.md) | 页面、服务、浏览器测试 |
 | 小程序验收 | [小程序路径](profiles/miniprogram.md) | 页面、开发者工具、真机 |
 | 恢复任务 | [当前状态](status.md)、当前任务的交接段落 | Git 变更、失败检查、相关提交 |

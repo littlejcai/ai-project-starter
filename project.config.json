@@ -1,6 +1,21 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "project_name": "REPLACE_WITH_PROJECT_NAME",
+  "lifecycle": {
+    "stage": "template",
+    "required_gates": {
+      "template": [],
+      "discovery": ["quality", "unit"],
+      "application": ["quality", "unit", "integration", "build"],
+      "release": ["quality", "unit", "integration", "build", "e2e"]
+    }
+  },
+  "tasks": {
+    "id_pattern": "(?:FEAT|BUG|CHORE|M[0-9]+)(?:-[A-Z0-9]+)*-[0-9]{3,6}",
+    "statuses": ["待开始", "澄清中", "开发中", "验证中", "阻塞", "已完成"],
+    "default_status": "待开始",
+    "inactive_statuses": ["待开始", "已完成"]
+  },
   "runtime_commands": {
     "install": [],
     "dev": []

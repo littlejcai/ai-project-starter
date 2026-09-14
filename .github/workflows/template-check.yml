@@ -1,15 +1,15 @@
-name: Template integrity and isolated demo only
+name: Project readiness
 on: [push, pull_request]
 permissions:
   contents: read
 jobs:
-  template:
+  readiness:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python scripts/check_template.py
-      - run: python scripts/verify.py --profile demo
-      - run: python scripts/test_framework.py
+      - run: python scripts/doctor.py --strict-manifest
+      - run: python scripts/verify.py --profile current
+      - run: python scripts/test_framework.py --if-template

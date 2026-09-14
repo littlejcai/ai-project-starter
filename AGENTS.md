@@ -28,13 +28,15 @@
 ```bash
 python3 scripts/check_template.py
 python3 scripts/verify.py --profile demo
+python3 scripts/doctor.py
+python3 scripts/verify.py --profile current
 python3 scripts/verify.py --profile quick
 python3 scripts/verify.py --profile full
-python3 scripts/new_task.py FEAT-001 "任务标题"
+python3 scripts/new_task.py FEAT-ID-001 "任务标题"
 ```
 
 以上是命令目录，不要求每项任务全部运行。模板文档变更运行结构/链接检查；修改框架工具或任务模板时再运行 `python3 scripts/test_framework.py`。业务变更执行相关验证及项目/CI 要求的检查。
-业务启动与 quick/full 尚未在 project.config.json 配置，未配置时应失败；demo 不能替代业务检查。接入说明见 [验证配置](docs/verification-setup.md)。
+业务启动与 quick/full 尚未在 project.config.json 配置。current 按当前生命周期阶段执行必需门禁；demo 不能替代业务检查。接入与转正说明见 [验证配置](docs/verification-setup.md)。
 仅在新变更、失败或具体未解决风险需要时扩大或重复验证；既有必需检查不得省略。涉及界面、数据库/权限/事务或平台能力的变更，完成对应的真实环境验证；模拟结果不能替代它们。
 日志在 artifacts/，原始敏感日志、密钥和生产数据不提交。
 

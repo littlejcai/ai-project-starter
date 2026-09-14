@@ -6,26 +6,32 @@ import sys
 from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUIRED = [
+CORE_REQUIRED = [
     'README.md', 'AGENTS.md', 'project.config.json', 'docs/index.md',
     'docs/product.md', 'docs/architecture.md', 'docs/status.md',
     'docs/testing.md', 'docs/workflow.md', 'docs/tasks/TEMPLATE.md',
     'docs/verification-setup.md', 'contracts/README.md',
-    'scripts/verify.py', 'scripts/new_task.py', 'TEMPLATE-VALIDATION.md',
+    'scripts/verify.py', 'scripts/new_task.py', 'scripts/project_config.py',
+    'scripts/doctor.py', 'scripts/promote_project.py', 'scripts/test_framework.py',
 ]
+TEMPLATE_REQUIRED = ['scripts/update_manifest.py', 'TEMPLATE-VALIDATION.md']
 
 
 def check(root=ROOT):
     errors = []
-    for name in REQUIRED:
-        if not (root / name).is_file():
-            errors.append(f'Missing required file: {name}')
+    stage = 'template'
     try:
         config = json.loads((root / 'project.config.json').read_text(encoding='utf-8'))
-        if not isinstance(config, dict) or config.get('schema_version') != 1:
-            errors.append('project.config.json: expected schema_version 1 object')
+        if not isinstance(config, dict) or config.get('schema_version') not in {1, 2}:
+            errors.append('project.config.json: expected schema_version 1 or 2 object')
+        elif config.get('schema_version') == 2:
+            stage = config.get('lifecycle', {}).get('stage', 'template')
     except (OSError, ValueError) as exc:
         errors.append(f'Invalid project.config.json: {exc}')
+    required = CORE_REQUIRED + (TEMPLATE_REQUIRED if stage == 'template' else [])
+    for name in required:
+        if not (root / name).is_file():
+            errors.append(f'Missing required file: {name}')
     excluded = {'node_modules', '.git', '.venv', 'artifacts', 'dist', 'build', '__pycache__'}
     def markdown_files(folder):
         for path in folder.iterdir():
