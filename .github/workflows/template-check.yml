@@ -11,5 +11,15 @@ jobs:
         with:
           python-version: '3.12'
       - run: python scripts/doctor.py --strict-manifest
-      - run: python scripts/verify.py --profile current
+      - id: verify
+        if: ${{ !cancelled() }}
+        run: python scripts/verify.py --profile current
       - run: python scripts/test_framework.py --if-template
+      - name: Preserve verification summaries
+        if: ${{ always() && steps.verify.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/*/summary.md
+          if-no-files-found: warn
+          retention-days: 14

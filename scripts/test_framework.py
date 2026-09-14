@@ -42,7 +42,6 @@ class FrameworkChecks(unittest.TestCase):
 
     def run_script(self, name, *args, env=None):
         variables = os.environ.copy()
-        variables.pop('DEMO_MUTATION', None)
         variables.update(env or {})
         return subprocess.run([sys.executable, str(self.root / 'scripts' / name), *args],
                               cwd=self.root, env=variables, capture_output=True, text=True,
@@ -63,28 +62,79 @@ class FrameworkChecks(unittest.TestCase):
         self.assertTrue(paths)
         return json.loads(max(paths, key=lambda p: p.stat().st_mtime_ns).read_text(encoding='utf-8'))
 
-    def test_template_and_demo(self):
+    def test_current_template_has_no_business_tests(self):
         self.assertEqual(self.run_script('check_template.py').returncode, 0)
-        result = self.run_script('verify.py', '--profile', 'demo')
-        self.assertEqual(result.returncode, 0, result.stdout)
-        report = self.report()
-        log = self.root / report['checks'][-1]['log']
-        self.assertIn('Ran 8 tests', log.read_text(encoding='utf-8'))
-        self.assertEqual(report['scope'], 'isolated example only')
-
-    def test_current_template_stage_runs_only_demo(self):
         result = self.run_script('verify.py', '--profile', 'current')
         self.assertEqual(result.returncode, 0, result.stdout)
         report = self.report()
         self.assertEqual(report['project_stage'], 'template')
-        self.assertIn('current template stage', report['scope'])
-        self.assertEqual(report['checks'][-1]['name'], 'demo')
+        self.assertIn('no business tests', report['scope'])
+        self.assertEqual([c['name'] for c in report['checks']], ['template_integrity'])
+        self.assertEqual(report['automatic_commands_executed'], 0)
+        self.assertEqual(report['business_acceptance'], 'not_assessed')
 
-    def test_demo_fault_is_caught(self):
-        result = self.run_script('verify.py', '--profile', 'demo', env={'DEMO_MUTATION': 'allow_full'})
+    def test_template_current_honors_explicit_gates(self):
+        self.configure(lambda c: c['lifecycle']['required_gates'].update(template=['unit']))
+        self.assertEqual(self.run_script('verify.py', '--profile', 'current').returncode, 0)
+        self.assertEqual(self.report()['automatic_commands_executed'], 1)
+        self.configure(lambda c: (
+            c['lifecycle']['required_gates'].update(template=['unit']),
+            c['gates']['unit'].update(command=['{python}', '-c', 'raise SystemExit(8)'])))
+        self.assertEqual(self.run_script('verify.py', '--profile', 'current').returncode, 1)
+        self.assertEqual(self.report()['checks'][-1]['exit_code'], 8)
+
+    def test_template_integrity_failure_is_not_green(self):
+        with (self.root / 'README.md').open('a', encoding='utf-8') as stream:
+            stream.write('\n[missing](missing-file.md)\n')
+        self.assertEqual(self.run_script('verify.py', '--profile', 'current').returncode, 1)
+        self.assertEqual(self.report()['result'], 'failed')
+        self.assertEqual(self.report()['checks'][0]['status'], 'failed')
+
+    def test_removed_profile_is_rejected(self):
+        result = self.run_script('verify.py', '--profile', 'demo')
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('invalid choice', result.stderr)
+
+    def test_summary_links_task_without_copying_raw_details(self):
+        task_id = 'CHORE-REPORT-001'
+        self.assertEqual(self.run_script('new_task.py', task_id, '工具检查').returncode, 0)
+        task = self.root / 'docs/tasks' / f'{task_id}.md'
+        before = task.read_bytes()
+        canary = 'private-test-fixture-marker'
+        self.configure(lambda c: c['gates']['unit'].update(
+            command=['{python}', '-c', f'print({canary!r}); raise SystemExit(7)']))
+        result = self.run_script('verify.py', '--profile', 'quick', '--task', task_id)
         self.assertEqual(result.returncode, 1)
-        log = self.root / self.report()['checks'][-1]['log']
-        self.assertIn('FAILED (failures=2)', log.read_text(encoding='utf-8'))
+        report = self.report()
+        self.assertEqual(report['task_id'], task_id)
+        folder = max((self.root / 'artifacts').iterdir(), key=lambda p: p.stat().st_mtime_ns)
+        summary = (folder / 'summary.md').read_text(encoding='utf-8')
+        self.assertIn(task_id, summary)
+        self.assertIn('| unit | failed | 7 |', summary)
+        self.assertNotIn(canary, summary)
+        self.assertIn(canary, (folder / 'unit.log').read_text(encoding='utf-8'))
+        self.assertEqual(task.read_bytes(), before)
+        self.assertEqual(report['business_acceptance'], 'not_assessed')
+
+    def test_task_reference_rejects_missing_and_traversal(self):
+        for task_id in ['FEAT-999999', '../escape', '']:
+            self.assertEqual(self.run_script('verify.py', '--profile', 'current',
+                                            '--task', task_id).returncode, 2)
+            self.assertIsNone(self.report()['task_id'])
+
+    def test_each_run_preserves_summary_even_on_config_failure(self):
+        config_path = self.root / 'project.config.json'
+        config = json.loads(config_path.read_text(encoding='utf-8'))
+        self.assertEqual(self.run_script('verify.py', '--profile', 'current').returncode, 0)
+        config_path.write_text('{broken', encoding='utf-8')
+        self.assertEqual(self.run_script('verify.py', '--profile', 'current').returncode, 2)
+        config.pop('lifecycle')
+        config_path.write_text(json.dumps(config), encoding='utf-8')
+        self.assertEqual(self.run_script('verify.py', '--profile', 'current').returncode, 2)
+        summaries = list((self.root / 'artifacts').glob('*/summary.md'))
+        self.assertEqual(len(summaries), 3)
+        self.assertTrue(any('failed / 2' in p.read_text(encoding='utf-8') for p in summaries))
+        self.assertTrue(any('passed / 0' in p.read_text(encoding='utf-8') for p in summaries))
 
     def test_unconfigured_quick_and_full_fail(self):
         for profile in ['quick', 'full']:
@@ -170,11 +220,11 @@ class FrameworkChecks(unittest.TestCase):
         self.assertEqual(self.run_script('check_template.py').returncode, 1)
 
     def test_task_create_preserve_and_reject_traversal(self):
-        result = self.run_script('new_task.py', 'FEAT-TOOLING-999999', '报名功能', '--status', '澄清中')
+        result = self.run_script('new_task.py', 'FEAT-TOOLING-999999', '工具任务', '--status', '澄清中')
         self.assertEqual(result.returncode, 0, result.stderr)
         path = self.root / 'docs/tasks/FEAT-TOOLING-999999.md'
         content = path.read_text(encoding='utf-8')
-        self.assertIn('报名功能', content)
+        self.assertIn('工具任务', content)
         self.assertIn('状态：澄清中', content)
         self.assertNotIn('{{TASK_ID}}', content)
         self.assertEqual(self.run_script('new_task.py', 'FEAT-TOOLING-999999', 'overwrite').returncode, 1)

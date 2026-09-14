@@ -9,7 +9,7 @@
 | 架构、接口与数据变更 | [架构](architecture.md)、[接口约定](../contracts/README.md)、[决策](decisions/README.md) |
 | 初始化 / 业务实施 | [流程](workflow.md)；新任务使用 [任务模板](tasks/TEMPLATE.md) |
 | 重要取舍 / 风险不明 | [原则](principles.md) |
-| 测试选择 / 接入检查和阶段推进 | [测试策略](testing.md) / [配置指南](verification-setup.md) |
+| 测试与报告管理 / 接入检查和阶段推进 | [测试策略](testing.md) / [配置指南](verification-setup.md) |
 | 审查 / 委派与整合 | [审查标准](review.md) / [协作约定](agents.md) |
 | 平台验收 | [Web](profiles/web.md)、[小程序](profiles/miniprogram.md) |
 | 发布 / 回退 | [发布清单](release.md) |

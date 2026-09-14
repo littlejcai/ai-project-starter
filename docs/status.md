@@ -1,8 +1,8 @@
 # 当前状态
 
-项目阶段：v1.4.1 模板维护，lifecycle.stage=template；尚无真实业务应用。
-当前任务：无进行中的业务任务。最近完成文档与入口精简，结果见 [验证记录](../TEMPLATE-VALIDATION.md)。
-技术栈：未确定。业务命令：未接入；current 仅验证示例，quick/full 预期失败。
+项目阶段：v1.5.0 模板维护，lifecycle.stage=template；尚无真实业务应用。
+当前任务：无进行中的业务任务。最近移除语言业务示例，接入检查摘要与任务关联，结果见 [验证记录](../TEMPLATE-VALIDATION.md)。
+技术栈：未确定。业务命令：未接入；current 默认仅做模板结构/配置检查，quick/full 预期失败。
 
 ## 下一步
 
