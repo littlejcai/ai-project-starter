@@ -12,7 +12,7 @@ CORE_REQUIRED = [
     'README.md', 'AGENTS.md', 'project.config.json', 'docs/index.md',
     'docs/product.md', 'docs/architecture.md', 'docs/status.md',
     'docs/testing.md', 'docs/workflow.md', 'docs/tasks/TEMPLATE.md',
-    'docs/verification-setup.md', 'contracts/README.md',
+    'docs/verification-setup.md',
     'scripts/verify.py', 'scripts/new_task.py', 'scripts/project_config.py',
     'scripts/doctor.py', 'scripts/promote_project.py', 'scripts/test_framework.py',
     'scripts/read_doc.py',

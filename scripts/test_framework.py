@@ -47,6 +47,10 @@ class FrameworkChecks(unittest.TestCase):
                               cwd=self.root, env=variables, capture_output=True, text=True,
                               encoding='utf-8', errors='replace', timeout=30)
 
+    def test_template_has_no_speculative_project_directories(self):
+        for name in ['src', 'tests', 'contracts', 'adapters']:
+            self.assertFalse((self.root / name).exists(), name)
+
     def configure(self, mutate=None):
         path = self.root / 'project.config.json'
         config = json.loads(path.read_text(encoding='utf-8'))

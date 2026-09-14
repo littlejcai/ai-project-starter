@@ -6,6 +6,7 @@ Python 3.10+，无第三方 Python 依赖。业务依赖由实际工程安装。
 
 project.config.json 中填写真实 project_name。runtime_commands 仅记录安装与启动参数，不由 verify.py 自动执行。
 schema_version 2 增加 lifecycle 与 tasks：前者记录当前阶段及各阶段必需门禁，后者定义任务 ID 正则、允许状态、默认状态和非活动状态。配置仍保持技术栈中立。
+模板只提供 docs/、prompts/、scripts/ 和 CI 等治理入口，不预建源码、测试、契约或适配器目录；技术方案确定后按实际工程创建并接入对应门禁。
 gates 是自动检查：quality、unit、integration、build、e2e。每项使用以下形式（这是语法示例，须替换为实际存在的命令）：
 
 ```json

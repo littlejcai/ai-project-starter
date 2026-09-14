@@ -6,7 +6,7 @@
 |---|---|
 | 首次全局理解 / 恢复进度 | 首次查 [README](../README.md)；接续查 [状态](status.md) 与当前任务的定位/交接，核对实际 Git 变更 |
 | 需求、验收与业务含义 | [产品](product.md) |
-| 架构、接口与数据变更 | [架构](architecture.md)、[接口约定](../contracts/README.md)、[决策](decisions/README.md) |
+| 架构、接口与数据变更 | [架构](architecture.md) 中登记的实际目录与接口事实源、[决策](decisions/README.md) |
 | 初始化 / 业务实施 | 流程的 [新项目初始化](workflow.md#新项目初始化) / [业务功能与重要修复](workflow.md#业务功能与重要修复)；新任务用 [任务模板](tasks/TEMPLATE.md) |
 | 重要取舍 / 风险不明 | [原则](principles.md) |
 | 测试选择 / 验收证据 | 测试策略的 [范围与停止条件](testing.md#范围与停止条件) / [报告与证据管理](testing.md#报告与证据管理) |
