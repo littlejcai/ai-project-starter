@@ -5,20 +5,14 @@ from pathlib import Path
 import re
 import sys
 
-from check_template import ROOT, check
+from check_template import ROOT, check, project_files
 from project_config import lifecycle, load_config, required_gates, task_settings, validate, valid_task_id
 
 
-EXCLUDED_PARTS = {'.git', 'artifacts', '__pycache__', 'node_modules', '.venv', 'dist', 'build'}
-
-
 def distribution_files(root):
-    for path in sorted(root.rglob('*')):
-        if path.is_symlink() or not path.is_file() or path.name in {'MANIFEST.sha256', '.DS_Store'}:
-            continue
-        if any(part in EXCLUDED_PARTS for part in path.relative_to(root).parts):
-            continue
-        yield path
+    for path in project_files(root):
+        if path.name not in {'MANIFEST.sha256', '.DS_Store'}:
+            yield path
 
 
 def check_manifest(root):
@@ -36,7 +30,7 @@ def check_manifest(root):
         if name in entries:
             errors.append(f'MANIFEST.sha256:{number}: duplicate path {name}')
         entries[name] = digest
-    actual_names = {str(path.relative_to(root)) for path in distribution_files(root)}
+    actual_names = {path.relative_to(root).as_posix() for path in distribution_files(root)}
     for name in sorted(actual_names - set(entries)):
         errors.append(f'MANIFEST.sha256: unlisted file {name}')
     for name in sorted(set(entries) - actual_names):
@@ -89,18 +83,11 @@ def inspect_tasks(root, config):
     return errors, warnings
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--strict-manifest', action='store_true',
-                        help='Verify the distribution manifest while lifecycle stage is template')
-    args = parser.parse_args()
-    errors = check()
-    warnings = []
-    stage = 'unknown'
+def inspect_project(config, root=ROOT, *, strict_manifest=False):
+    """Doctor-specific checks; caller supplies the validated config and checks structure."""
+    errors, warnings = [], []
+    stage = lifecycle(config)['stage']
     try:
-        config = load_config(ROOT)
-        validate(config)
-        stage = lifecycle(config)['stage']
         if stage != 'template' and config['project_name'] == 'REPLACE_WITH_PROJECT_NAME':
             errors.append('project_name must be replaced before leaving template stage')
         for name in required_gates(config):
@@ -110,12 +97,30 @@ def main():
             empty = [name for name, command in config['runtime_commands'].items() if not command]
             if empty:
                 warnings.append('Runtime commands still empty: ' + ', '.join(empty))
-        task_errors, task_warnings = inspect_tasks(ROOT, config)
+        task_errors, task_warnings = inspect_tasks(root, config)
         errors.extend(task_errors)
         warnings.extend(task_warnings)
-        if args.strict_manifest and stage == 'template':
-            errors.extend(check_manifest(ROOT))
-    except (OSError, ValueError, TypeError) as exc:
+        if strict_manifest and stage == 'template':
+            errors.extend(check_manifest(root))
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        errors.append(str(exc))
+    return errors, warnings
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--strict-manifest', action='store_true',
+                        help='Verify distribution hashes while lifecycle stage is template')
+    args = parser.parse_args()
+    errors, warnings, stage = [], [], 'unknown'
+    try:
+        config = load_config(ROOT)
+        validate(config)
+        stage = lifecycle(config)['stage']
+        errors.extend(check(config=config))
+        extra_errors, warnings = inspect_project(config, strict_manifest=args.strict_manifest)
+        errors.extend(extra_errors)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
         errors.append(str(exc))
     for message in errors:
         print('FAIL:', message)

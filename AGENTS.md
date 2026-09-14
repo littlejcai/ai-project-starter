@@ -9,7 +9,7 @@
 
 ## 按需读取
 
-有效上下文不重复读取，链接不递归展开。简单局部修改直接定位相关文件，无需新建任务、完整计划或全套阅读；复杂工作先明确范围与验收。
+有效上下文不重复读取，链接不递归展开；按任务定位到文件/符号及规则编号。长文按索引章节使用 `scripts/read_doc.py` 提取，缺失或失效时再扩大检索。简单局部修改直接定位相关文件，无需新建任务、完整计划或全套阅读；复杂工作先明确范围与验收。
 
 - 初始化或业务链路：查 [流程](docs/workflow.md)；重要需求/架构或反复失败时查 [原则](docs/principles.md)。
 - 验证范围不明：查 [测试策略](docs/testing.md)；低风险针对性核对，普通业务审查实现，高风险审查方案与实现，见 [审查标准](docs/review.md)。
@@ -21,12 +21,11 @@
 以下 Python 3.10+ 脚本仅是框架辅助工具，不决定业务技术栈；在根目录按需执行：
 
 ```bash
-python3 scripts/doctor.py
-python3 scripts/verify.py --profile current
+python3 scripts/verify.py --profile current --readiness
 ```
 
-doctor 只做静态自检；current 执行当前阶段检查，template 阶段默认仅检查结构和配置，明确不代表业务测试。接入业务、任务创建、quick/full、阶段推进及清单维护查 [配置指南](docs/verification-setup.md)。
-模板发行变更更新清单并运行严格自检；框架工具或任务模板变更运行 `python3 scripts/test_framework.py`。保留既有 CI/发布必需检查，只因新变更、失败或具体未解决风险扩大或重复验证。
+--readiness 在一次运行中合并 doctor 静态自检与阶段检查；doctor 仍可独立使用。template 默认不执行业务测试。接入业务、任务创建、quick/full、阶段推进及清单维护查 [配置指南](docs/verification-setup.md)。
+模板发行变更更新清单并在组合命令追加 --strict-manifest；框架工具或任务模板变更运行 `python3 scripts/test_framework.py`。保留既有 CI/发布必需检查，只因新变更、失败或具体未解决风险扩大或重复验证。
 涉及界面、数据库/权限/事务及平台能力时完成对应真实验证，模拟不能替代；密钥、生产数据和 artifacts/ 中敏感日志不提交。
 
 ## 完成与交接

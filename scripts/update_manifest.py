@@ -14,7 +14,7 @@ def main():
     lines = []
     for path in distribution_files(ROOT):
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        lines.append(f'{digest}  {path.relative_to(ROOT)}')
+        lines.append(f'{digest}  {path.relative_to(ROOT).as_posix()}')
     (ROOT / 'MANIFEST.sha256').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print(f'Updated MANIFEST.sha256 with {len(lines)} files.')
 

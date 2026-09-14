@@ -38,7 +38,7 @@ def main():
             json.dumps(config, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         print('Updated project.config.json.')
         print('Update AGENTS.md, README.md, and docs/status.md if their project identity is stale.')
-        print('Then run: python3 scripts/doctor.py && python3 scripts/verify.py --profile current')
+        print('Then run: python3 scripts/verify.py --profile current --readiness')
         return 0
     except (OSError, ValueError, TypeError) as exc:
         parser.exit(1, f'Cannot promote: {exc}\n')

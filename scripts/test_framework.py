@@ -270,6 +270,144 @@ class FrameworkChecks(unittest.TestCase):
         self.assertEqual(upgraded['lifecycle']['stage'], 'discovery')
         self.assertIn('id_pattern', upgraded['tasks'])
 
+    def test_combined_readiness_preserves_task_and_manifest_failures(self):
+        task_id = 'CHORE-COMBINED-001'
+        self.assertEqual(self.run_script('new_task.py', task_id, '组合检查').returncode, 0)
+        task = self.root / 'docs/tasks' / f'{task_id}.md'
+        original = task.read_text(encoding='utf-8')
+        task.write_text(original.replace('状态：待开始', '状态：错误'), encoding='utf-8')
+        self.assertEqual(self.run_script('update_manifest.py').returncode, 0)
+        result = self.run_script('verify.py', '--profile', 'current', '--readiness', '--strict-manifest')
+        self.assertEqual(result.returncode, 1, result.stdout)
+        readiness = next(c for c in self.report()['checks'] if c['name'] == 'project_readiness')
+        self.assertTrue(readiness['manifest_checked'])
+        self.assertTrue(any('task status' in e for e in readiness['errors']))
+        task.write_text(original, encoding='utf-8')
+        self.assertEqual(self.run_script('update_manifest.py').returncode, 0)
+        self.assertEqual(self.run_script('verify.py', '--profile', 'current', '--strict-manifest').returncode, 0)
+        with (self.root / 'README.md').open('a', encoding='utf-8') as stream:
+            stream.write('\nChanged after manifest\n')
+        self.assertEqual(self.run_script('verify.py', '--profile', 'current', '--strict-manifest').returncode, 1)
+        readiness = next(c for c in self.report()['checks'] if c['name'] == 'project_readiness')
+        self.assertTrue(any('checksum mismatch README.md' in e for e in readiness['errors']))
+
+    def test_combined_check_loads_and_scans_once(self):
+        code = '''import sys
+sys.path.insert(0, 'scripts')
+from unittest.mock import patch
+import verify, check_template
+sys.argv = ['verify.py', '--profile', 'current', '--readiness']
+with patch.object(verify, 'load_config', wraps=verify.load_config) as load, \\
+     patch.object(verify, 'validate', wraps=verify.validate) as validate, \\
+     patch.object(check_template, 'project_files', wraps=check_template.project_files) as walk, \\
+     patch.object(verify, 'inspect_project', wraps=verify.inspect_project) as readiness:
+    assert verify.main() == 0
+    assert load.call_count == validate.call_count == walk.call_count == readiness.call_count == 1
+'''
+        result = subprocess.run([sys.executable, '-c', code], cwd=self.root, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_doctor_and_verify_reject_malformed_config_without_traceback(self):
+        config_path = self.root / 'project.config.json'
+        config = json.loads(config_path.read_text(encoding='utf-8'))
+        config['lifecycle'] = None
+        config_path.write_text(json.dumps(config), encoding='utf-8')
+        for script, args in [('doctor.py', []), ('check_template.py', []),
+                             ('verify.py', ['--profile', 'current', '--readiness'])]:
+            result = self.run_script(script, *args)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertNotIn('Traceback', result.stdout + result.stderr)
+
+    def test_directory_walker_prunes_dependencies(self):
+        code = '''import sys
+sys.path.insert(0, 'scripts')
+import check_template
+from unittest.mock import patch
+from pathlib import Path
+root = Path.cwd()
+(root / 'node_modules').mkdir()
+(root / 'node_modules' / 'ignore.md').write_text('ignored')
+real_walk = check_template.os.walk
+visited = []
+def tracked(*args, **kwargs):
+    for item in real_walk(*args, **kwargs):
+        visited.append(Path(item[0]))
+        yield item
+with patch.object(check_template.os, 'walk', tracked):
+    files = list(check_template.project_files(root))
+assert root / 'node_modules' not in visited
+assert all('node_modules' not in p.relative_to(root).parts for p in files)
+'''
+        result = subprocess.run([sys.executable, '-c', code], cwd=self.root, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_report_view_is_read_only_and_logs_are_explicit(self):
+        canary = 'private-log-content-for-test'
+        self.configure(lambda c: c['gates']['unit'].update(
+            command=['{python}', '-c', f'print({canary!r}); raise SystemExit(7)']))
+        self.assertEqual(self.run_script('verify.py', '--profile', 'quick').returncode, 1)
+        report_path = next((self.root / 'artifacts').glob('*/report.json'))
+        run_id = report_path.parent.name
+        before = {str(p): p.read_bytes() for p in report_path.parent.iterdir()}
+        result = self.run_script('verify.py', '--report', run_id)
+        self.assertEqual(result.returncode, 0)
+        view = json.loads(result.stdout)
+        self.assertEqual(view['result'], 'failed')
+        self.assertEqual([c['name'] for c in view['checks']], ['unit'])
+        self.assertNotIn(canary, result.stdout)
+        self.assertNotIn('config_snapshot', view)
+        self.assertNotIn(canary, self.run_script('verify.py', '--report', run_id, '--check', 'unit').stdout)
+        result = self.run_script('verify.py', '--report', run_id, '--check', 'unit', '--tail', '5')
+        self.assertEqual(result.returncode, 0)
+        self.assertIn(canary, json.loads(result.stdout)['log_excerpt'])
+        self.assertEqual(len(list((self.root / 'artifacts').iterdir())), 1)
+        self.assertEqual(before, {str(p): p.read_bytes() for p in report_path.parent.iterdir()})
+
+    def test_report_view_bounds_logs_and_rejects_escape(self):
+        self.configure(lambda c: c['gates']['unit'].update(
+            command=['{python}', '-c', 'print("x" * 20000); raise SystemExit(1)']))
+        self.assertEqual(self.run_script('verify.py', '--profile', 'quick').returncode, 1)
+        report_path = next((self.root / 'artifacts').glob('*/report.json'))
+        run_id = report_path.parent.name
+        result = self.run_script('verify.py', '--report', run_id, '--check', 'unit', '--tail', '2')
+        view = json.loads(result.stdout)
+        self.assertLessEqual(len(view['log_excerpt']), 12000)
+        self.assertTrue(view['log_excerpt_truncated'])
+        for args in [('--report', '../escape'), ('--report', run_id, '--tail', '5'),
+                     ('--report', run_id, '--check', 'unit', '--tail', '201'),
+                     ('--report', run_id, '--check', 'missing')]:
+            self.assertEqual(self.run_script('verify.py', *args).returncode, 2)
+        report = json.loads(report_path.read_text(encoding='utf-8'))
+        next(c for c in report['checks'] if c['name'] == 'unit')['log'] = '../outside.log'
+        report_path.write_text(json.dumps(report), encoding='utf-8')
+        self.assertEqual(self.run_script('verify.py', '--report', run_id, '--check', 'unit', '--tail', '5').returncode, 2)
+
+    def test_document_sections_ignore_fences_and_support_continuation(self):
+        path = self.root / 'docs' / 'reader-test.md'
+        path.write_text('# Root\n## Target\nfirst\n```md\n## Fake\n```\n### Child\ninside\n## Other\nprivate-unrelated-section\n', encoding='utf-8')
+        result = self.run_script('read_doc.py', 'docs/reader-test.md')
+        self.assertEqual(result.returncode, 0)
+        self.assertNotIn('Fake', result.stdout)
+        self.assertNotIn('private-unrelated-section', result.stdout)
+        result = self.run_script('read_doc.py', 'docs/reader-test.md', '--section', 'Target', '--max-lines', '2')
+        self.assertIn('first', result.stdout)
+        self.assertIn('--start-line 4', result.stdout)
+        self.assertNotIn('private-unrelated-section', result.stdout)
+        result = self.run_script('read_doc.py', 'docs/reader-test.md', '--section', 'Target', '--start-line', '4')
+        self.assertEqual(result.returncode, 0)
+        self.assertIn('inside', result.stdout)
+        self.assertNotIn('private-unrelated-section', result.stdout)
+        self.assertEqual(self.run_script('read_doc.py', 'docs/reader-test.md', '--section', 'Target', '--start-line', '10').returncode, 2)
+
+    def test_document_reader_rejects_missing_ambiguous_and_external_paths(self):
+        path = self.root / 'docs' / 'reader-test.md'
+        path.write_text('# Root\n## Same\na\n## Same\nb\n', encoding='utf-8')
+        for args in [('docs/reader-test.md', '--section', 'Same'),
+                     ('docs/reader-test.md', '--section', 'Missing'), ('project.config.json',),
+                     ('../outside.md',), ('docs/reader-test.md', '--max-lines', '0')]:
+            self.assertEqual(self.run_script('read_doc.py', *args).returncode, 2)
+
+
 
 if __name__ == '__main__':
     if '--if-template' in sys.argv:

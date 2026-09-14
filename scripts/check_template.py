@@ -1,9 +1,11 @@
 """Check required files and relative Markdown links; not a business test."""
 from pathlib import Path
-import json
+import os
 import re
 import sys
 from urllib.parse import unquote
+
+from project_config import load_config, validate, lifecycle
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE_REQUIRED = [
@@ -13,35 +15,44 @@ CORE_REQUIRED = [
     'docs/verification-setup.md', 'contracts/README.md',
     'scripts/verify.py', 'scripts/new_task.py', 'scripts/project_config.py',
     'scripts/doctor.py', 'scripts/promote_project.py', 'scripts/test_framework.py',
+    'scripts/read_doc.py',
 ]
 TEMPLATE_REQUIRED = ['scripts/update_manifest.py', 'TEMPLATE-VALIDATION.md']
 
 
-def check(root=ROOT):
+EXCLUDED_PARTS = {'.git', 'artifacts', '__pycache__', 'node_modules', '.venv', 'dist', 'build'}
+
+
+def project_files(root):
+    """Prune excluded directories before walking into them; never follow symlinks."""
+    for folder, directories, files in os.walk(root, topdown=True, followlinks=False):
+        base = Path(folder)
+        directories[:] = sorted(name for name in directories
+                                if name not in EXCLUDED_PARTS and not (base / name).is_symlink())
+        for name in sorted(files):
+            path = base / name
+            if not path.is_symlink():
+                yield path
+
+
+def check(root=ROOT, *, config=None):
+    # Internal callers pass their already validated configuration for this run only.
     errors = []
     stage = 'template'
     try:
-        config = json.loads((root / 'project.config.json').read_text(encoding='utf-8'))
-        if not isinstance(config, dict) or config.get('schema_version') not in {1, 2}:
-            errors.append('project.config.json: expected schema_version 1 or 2 object')
-        elif config.get('schema_version') == 2:
-            stage = config.get('lifecycle', {}).get('stage', 'template')
-    except (OSError, ValueError) as exc:
+        if config is None:
+            config = load_config(root)
+            validate(config)
+        stage = lifecycle(config)['stage']
+    except (OSError, ValueError, TypeError, KeyError) as exc:
         errors.append(f'Invalid project.config.json: {exc}')
     required = CORE_REQUIRED + (TEMPLATE_REQUIRED if stage == 'template' else [])
     for name in required:
         if not (root / name).is_file():
             errors.append(f'Missing required file: {name}')
-    excluded = {'node_modules', '.git', '.venv', 'artifacts', 'dist', 'build', '__pycache__'}
-    def markdown_files(folder):
-        for path in folder.iterdir():
-            if path.is_symlink():
-                continue
-            if path.is_dir() and path.name not in excluded:
-                yield from markdown_files(path)
-            elif path.is_file() and path.suffix == '.md':
-                yield path
-    for path in markdown_files(root):
+    for path in project_files(root):
+        if path.suffix != '.md':
+            continue
         content = re.sub(r'```.*?```', '', path.read_text(encoding='utf-8'), flags=re.S)
         for target in re.findall(r'\[[^\]]*\]\(([^\s)]+)\)', content):
             if target.startswith(('#', '//')) or re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):

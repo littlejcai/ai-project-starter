@@ -1,4 +1,4 @@
-# AI 项目开发基础框架 · v1.5.0
+# AI 项目开发基础框架 · v1.6.0
 
 供个人或小团队用 AI 开发 Web、小程序和后端项目的工作模板，包含分层文档、任务和检查工具，不附带业务代码或语言示例。业务技术栈由具体项目选择。
 
@@ -8,14 +8,13 @@ scripts/ 中的辅助工具使用 Python 3.10+ 标准库，仅负责项目检查
 先在尚未修改的模板副本中检查发行完整性与模板结构：
 
 ```bash
-python3 scripts/doctor.py --strict-manifest
-python3 scripts/verify.py --profile current
+python3 scripts/verify.py --profile current --readiness --strict-manifest
 ```
 
-`doctor` 检查配置、任务与链接，不执行业务测试；template 阶段默认 `current` 只检查配置、必需结构与链接，并标明未执行业务测试；业务阶段必须配置并运行真实检查。
+该命令一次完成配置、任务、结构、链接与发行哈希检查；template 默认不执行业务测试，业务阶段必须配置并运行真实检查。doctor 仍可单独做静态自检。
 
 将 [AGENTS.md](AGENTS.md) 交给 AI，填写 [启动提示](prompts/start-project.md) 中的需求与交付范围。按 [开发流程](docs/workflow.md) 完成产品定义、关键实验、最小架构和第一条业务链路；只详细规划当前及下一里程碑。
-在 `src/`、`tests/` 接入真实代码，按 [配置指南](docs/verification-setup.md) 设置项目身份、运行命令和阶段检查，再推进生命周期。日常使用 `doctor.py` 与按任务选择的检查；严格清单不用于跟踪业务开发改动。
+在 `src/`、`tests/` 接入真实代码，按 [配置指南](docs/verification-setup.md) 设置项目身份、运行命令和阶段检查，再推进生命周期。日常使用 `verify.py --profile current --readiness` 合并自检，或按任务单独选择检查；严格清单不用于跟踪业务开发改动。
 
 ## 核心用法
 
@@ -37,7 +36,7 @@ CI 在 template 阶段检查发行清单、结构与框架工具回归，进入�
 
 ## 模板维护与跨 AI 使用
 
-本版移除 Python 业务示例与 `--profile demo`；原调用改用 `current` 做阶段检查，实际业务测试仍需自行接入。每次检查自动生成 summary.md 与 report.json，可用 `--task` 关联已有任务；CI 默认仅留存摘要 14 天。历史改动见 Git 记录。
+本版增加文件/符号定位、按章节读取及报告定点排障，并合并重复检查、提前排除依赖目录遍历；保留所有必需门禁。按需命令见 [配置指南](docs/verification-setup.md#按需读取)。不引入测试缓存或调度层，未宣称已测得模型 token 节省。历史改动见 Git 记录。
 修改模板发行内容后运行 `python3 scripts/update_manifest.py`，再运行严格自检；模板/任务生成变更执行 `python3 scripts/test_framework.py`。不要靠刷新清单掩盖非预期改动。
 公共规则只维护在 AGENTS.md 与 docs/；[CLAUDE.md](CLAUDE.md) 是薄入口，其他工具参照 [适配说明](adapters/README.md)。客户端不自动读取时，显式要求先读 AGENTS.md。
 

@@ -10,10 +10,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python scripts/doctor.py --strict-manifest
       - id: verify
         if: ${{ !cancelled() }}
-        run: python scripts/verify.py --profile current
+        run: python scripts/verify.py --profile current --readiness --strict-manifest
       - run: python scripts/test_framework.py --if-template
       - name: Preserve verification summaries
         if: ${{ always() && steps.verify.outcome != 'skipped' }}
