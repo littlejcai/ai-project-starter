@@ -9,6 +9,16 @@ from check_template import ROOT, check, project_files
 from project_config import lifecycle, load_config, required_gates, task_settings, validate, valid_task_id
 
 
+def content_digest(path):
+    """Hash LF-normalized content, matching how the manifest is recorded.
+
+    The manifest stores a checkout-independent content hash, so it stays valid
+    across platforms and line-ending settings instead of depending on whether a
+    workspace was checked out with CRLF.
+    """
+    return hashlib.sha256(path.read_bytes().replace(b'\r\n', b'\n')).hexdigest()
+
+
 def distribution_files(root):
     for path in project_files(root):
         if path.name not in {'MANIFEST.sha256', '.DS_Store'}:
@@ -36,8 +46,7 @@ def check_manifest(root):
     for name in sorted(set(entries) - actual_names):
         errors.append(f'MANIFEST.sha256: missing file {name}')
     for name in sorted(actual_names & set(entries)):
-        digest = hashlib.sha256((root / name).read_bytes()).hexdigest()
-        if digest != entries[name]:
+        if content_digest(root / name) != entries[name]:
             errors.append(f'MANIFEST.sha256: checksum mismatch {name}')
     return errors
 
