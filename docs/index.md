@@ -6,6 +6,7 @@
 |---|---|
 | 首次全局理解 / 恢复进度 | 首次查 [README](../README.md)；接续查 [状态](status.md) 与当前任务的定位/交接，核对实际 Git 变更 |
 | 需求、验收与业务含义 | [产品](product.md) |
+| 界面、品牌与设计约束 | 先查产品中的界面输入；有实际界面交付时按 [流程](workflow.md#界面与品牌基线按需) 创建或读取 `docs/experience.md`，无界面项目不创建 |
 | 架构、接口与数据变更 | [架构](architecture.md) 中登记的实际目录与接口事实源、[决策](decisions/README.md) |
 | 初始化 / 业务实施 | 流程的 [新项目初始化](workflow.md#新项目初始化) / [业务功能与重要修复](workflow.md#业务功能与重要修复)；新任务用 [任务模板](tasks/TEMPLATE.md) |
 | 重要取舍 / 风险不明 | [原则](principles.md) |
@@ -18,7 +19,7 @@
 
 读取示例：`python3 scripts/read_doc.py docs/testing.md --section "报告与证据管理"`。省略 --section 只列标题，遇到截断按提示续读；完整标准仍按任务需要查阅。
 
-简单局部修改直接检查相关文件、测试或预览。业务规则、接口格式、架构决策各在上述位置维护一份；任务仅引用并记录本次变更和证据。
+简单局部修改直接检查相关文件、测试或预览。业务规则、体验基线、接口格式、架构决策各在上述适用位置维护一份；不存在界面交付时不补体验事实源，任务仅引用并记录本次变更和证据。
 
 需要启动提示时选择：[新项目](../prompts/start-project.md)、[实施](../prompts/implement-task.md)、[接续](../prompts/review-and-resume.md)、[独立审查](../prompts/review-task.md)、[审查委派](../prompts/subagent-review.md)。
 

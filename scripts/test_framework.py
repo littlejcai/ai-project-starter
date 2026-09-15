@@ -51,6 +51,16 @@ class FrameworkChecks(unittest.TestCase):
         for name in ['src', 'tests', 'contracts', 'adapters']:
             self.assertFalse((self.root / name).exists(), name)
 
+    def test_experience_baseline_is_materialized_only_on_demand(self):
+        for name in ['docs/experience.md', 'docs/brand.md', 'docs/ux']:
+            self.assertFalse((self.root / name).exists(), name)
+        prompt = (self.root / 'prompts/start-project.md').read_text(encoding='utf-8')
+        workflow = (self.root / 'docs/workflow.md').read_text(encoding='utf-8')
+        self.assertIn('界面与品牌：', prompt)
+        self.assertIn('无用户界面时不创建体验文档', prompt)
+        self.assertIn('docs/experience.md', workflow)
+        self.assertIn('才拆分为品牌与 UX/UI 文档', workflow)
+
     def configure(self, mutate=None):
         path = self.root / 'project.config.json'
         config = json.loads(path.read_text(encoding='utf-8'))
